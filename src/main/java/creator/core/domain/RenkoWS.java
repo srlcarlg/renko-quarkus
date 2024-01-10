@@ -21,7 +21,7 @@ import java.util.stream.Stream;
  */
 public class RenkoWS {
 
-	private List<WSRSD> rsd = new ArrayList<>();
+	private List<RSD> rsd = new ArrayList<>();
 	private Double brickSize;
 	
     private Object wsDate;
@@ -56,7 +56,7 @@ public class RenkoWS {
 
 		Double initialPrice = (Math.floor(price/brickSize)) * brickSize;
 		// Renko Single Data
-		rsd.add(new WSRSD(date, initialPrice, 0D, initialPrice, 1D));
+		rsd.add(new RSD(date, initialPrice, 0D, initialPrice, 1D));
 
 		this.brickSize = brickSize;
 		wsDate = date;
@@ -125,10 +125,10 @@ public class RenkoWS {
         
         if (rsd.size() >= 2) {
             rsd.set(rsd.size()-2, rsd.get(rsd.size()-1));
-            rsd.set(rsd.size()-1, new WSRSD(date, renkoPrice, currentDirection, wick, volumeInLoop));
+            rsd.set(rsd.size()-1, new RSD(date, renkoPrice, currentDirection, wick, volumeInLoop));
         }
         else {
-            rsd.add(new WSRSD(date, renkoPrice, currentDirection, wick, volumeInLoop));
+            rsd.add(new RSD(date, renkoPrice, currentDirection, wick, volumeInLoop));
         }
         
         // Reset

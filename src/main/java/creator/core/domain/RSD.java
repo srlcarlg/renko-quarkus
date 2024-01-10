@@ -1,6 +1,6 @@
 package creator.core.domain;
 
-public class WSRSD {
+public class RSD {
 	
 	private Object date;
 	private Double price;
@@ -8,9 +8,9 @@ public class WSRSD {
 	private Double wick;
 	private Double volume;
 	
-	public WSRSD() {}
+	public RSD() {}
 	
-	public WSRSD(Object date, Double price, Double direction, Double wick, Double volume) {
+	public RSD(Object date, Double price, Double direction, Double wick, Double volume) {
 		super();
 		this.date = date;
 		this.price = price;
