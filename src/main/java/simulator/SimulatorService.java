@@ -3,6 +3,7 @@ package simulator;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -13,14 +14,15 @@ import org.apache.parquet.hadoop.util.HadoopInputFile;
 import com.exasol.parquetio.data.Row;
 import com.exasol.parquetio.reader.RowParquetReader;
 
+import jakarta.enterprise.context.ApplicationScoped;
 
+@ApplicationScoped
 public class SimulatorService {
 	
 	static final String RESOURCE_PATH = new File("src/main/resources").getAbsolutePath() + "/";
 	static final String FILE_STRING = "_T1_cT.parquet";
 	
 	public List<Tick> getTickList(String symbol) {
-
 		List<Tick> rawTicks = new ArrayList<>();
 		
 		final Path path = new Path(RESOURCE_PATH + symbol + FILE_STRING);
@@ -37,6 +39,6 @@ public class SimulatorService {
 	            row = reader.read();
 	        }
 	        return rawTicks;
-		} catch (final IOException exception) { return null; }
+		} catch (final IOException exception) { return Collections.emptyList(); }
 	}
 }
