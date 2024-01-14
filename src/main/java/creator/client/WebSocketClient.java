@@ -1,62 +1,60 @@
 package creator.client;
 
-import java.net.URI;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import creator.core.services.RenkoChartService;
-import io.quarkus.runtime.Startup;
-import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.websocket.ClientEndpoint;
-import jakarta.websocket.ContainerProvider;
+import jakarta.websocket.EndpointConfig;
+import jakarta.websocket.OnClose;
+import jakarta.websocket.OnError;
 import jakarta.websocket.OnMessage;
 import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
-import jakarta.websocket.WebSocketContainer;
 
 @ClientEndpoint(decoders = TickDecoder.class)
 @ApplicationScoped
 public class WebSocketClient {
 
-	private final URI uri = URI.create("ws://localhost:8080/start-ws/EURGBP");
-	private final WebSocketContainer wsContainer = ContainerProvider.getWebSocketContainer();
-	
+	private static Map<Session, String> sessions = new ConcurrentHashMap<>();
 	@Inject
-	private RenkoChartService service;
-	
-	private boolean first = false;
-	private Session session;
+	private RenkoChartService chartService;
 
-	@Startup
-	@Scheduled(every = "10s")
-	void init() {
-		try {
-			if (session == null) {
-				session = wsContainer.connectToServer(this, uri);
-			}
-		} catch (Exception e) {
-			System.out.println("ERROR CLIENT: " + e);
-		}
+	@OnOpen
+	public void onOpen(Session session, EndpointConfig endpointConfig) {
+		String symbol = getSymbolFromSession(session);
+		sessions.put(session, symbol);
+		session.getAsyncRemote().sendText("_ready_");
+
+		System.out.println("CLIENT: onOpen> " + session.toString() + " on " + symbol);
 	}
 
-    @OnOpen
-    public void onOpen(Session session) {
-        System.out.println("CLIENT: onOpen> " + session.toString());
-        
-        this.session = session;
-        session.getAsyncRemote().sendText("_ready_");
-    }
+	@OnClose
+	public void onClose(Session session) {
+		System.out.println("onClose> " + session + " on " + getSymbolFromSession(session));
+		sessions.remove(session);
+	}
 
-    @OnMessage
-    public void onMessage(Tick message) {
-    	if (!first) {
-    		service.initRenko(message.getDatetime(), Double.valueOf(message.getBid()), 0.0003);
-    		first = true;
-    	}
-    	service.addPrices(message.getDatetime(), Double.valueOf(message.getBid()));
-    	service.makeChart("normal");
-        
-    	// System.out.println("CLIENT: OnMessage> " + message);
-    }
+	@OnError
+	public void onError(Session session, Throwable throwable) {
+		System.out.println("onError> " + session + " on " + getSymbolFromSession(session) + throwable);
+		sessions.remove(session);
+	}
 
+	@OnMessage
+	public void onMessage(Tick message, Session session) {
+		String symbol = getSymbolFromSession(session);
+		chartService.initRenko(symbol, message.getDatetime(), Double.valueOf(message.getBid()),
+				symbol.equals("EURGBP") ? 0.0003 : 5D);
+		chartService.addPrices(symbol, message.getDatetime(), Double.valueOf(message.getBid()));
+		chartService.makeChart(symbol, "normal");
+		// System.out.println("CLIENT: OnMessage> " + symbol ": " + message);
+	}
+
+	private static final String getSymbolFromSession(Session session) {
+		String urlPath = session.getRequestURI().getPath();
+		return urlPath.substring(urlPath.lastIndexOf('/') + 1);
+	}
 }
