@@ -1,4 +1,6 @@
-package creator.core.domain;
+package creator.core.services.wrappers;
+
+import creator.core.domain.OHLCV;
 
 public class TopicMsg {
 	

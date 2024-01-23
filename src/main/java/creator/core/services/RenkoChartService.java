@@ -12,7 +12,8 @@ import org.eclipse.microprofile.reactive.messaging.Message;
 
 import creator.core.domain.OHLCV;
 import creator.core.domain.RenkoWS;
-import creator.core.domain.TopicMsg;
+import creator.core.services.wrappers.PrevMsgWrapper;
+import creator.core.services.wrappers.TopicMsg;
 import io.smallrye.reactive.messaging.annotations.Broadcast;
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata;
 import jakarta.enterprise.context.ApplicationScoped;
