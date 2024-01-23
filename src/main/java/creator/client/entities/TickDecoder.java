@@ -1,4 +1,4 @@
-package creator.client;
+package creator.client.entities;
 
 import java.io.StringReader;
 

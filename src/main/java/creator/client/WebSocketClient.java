@@ -1,5 +1,8 @@
 package creator.client;
 
+import creator.client.entities.SessionInfo;
+import creator.client.entities.Tick;
+import creator.client.entities.TickDecoder;
 import creator.core.services.RenkoChartService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -17,41 +20,43 @@ public class WebSocketClient {
 
 	@Inject
 	RenkoChartService renkoService;
+	@Inject
+	SessionService sessionService;
 
 	@OnOpen
 	public void onOpen(Session session, EndpointConfig endpointConfig) {
-		String symbol = getSymbolFromSession(session);
+		System.out.println("CLIENT: onOpen> " + session.toString());
 		session.getAsyncRemote().sendText("_ready_");
-		System.out.println("CLIENT: onOpen> " + session.toString() + " on " + symbol);
 	}
 
 	@OnClose
 	public void onClose(Session session) {
-		System.out.println("onClose> " + session + " on " + getSymbolFromSession(session));
+		SessionInfo info = sessionService.getSessionInfo(session);
+		System.out.println("CLIENT: onClose> " + session + " on " + info.getSymbol());
+		sessionService.removeSession(session);
 	}
 
 	@OnError
 	public void onError(Session session, Throwable throwable) {
-		System.out.println("onError> " + session + " on " + getSymbolFromSession(session) + throwable);
-		System.out.println(throwable.getClass());
+		SessionInfo info = sessionService.getSessionInfo(session);
+		System.out.println("CLIENT: onError> " + session + " on " + info.getSymbol() + ": " + throwable);
+		sessionService.removeSession(session);
 		closeSession(session);
 	}
 
 	@OnMessage
 	public void onMessage(Tick message, Session session) {
-		String symbol = getSymbolFromSession(session);
-		renkoService.buildRenko(symbol, message.getDatetime(), Double.valueOf(message.getBid()),
-				symbol.equals("EURGBP") ? 0.0003 : 5D);
+		SessionInfo info = sessionService.getSessionInfo(session);
+		renkoService.buildRenko(
+				info.getSymbol(),
+				message.getDatetime(), Double.valueOf(message.getBid()),
+				info.getBrickSize()
+		);
 	}
 
 	private void closeSession(Session session) {
 		try {
 			session.close();
 		} catch (Exception e) { }
-	}
-
-	private static final String getSymbolFromSession(Session session) {
-		String urlPath = session.getRequestURI().getPath();
-		return urlPath.substring(urlPath.lastIndexOf('/') + 1);
 	}
 }
