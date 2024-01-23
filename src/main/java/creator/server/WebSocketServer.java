@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -23,20 +25,28 @@ public class WebSocketServer {
 
 	private static final List<String> renkoModes = Arrays.asList("normal","wicks","nongap");
 	private static Map<String, ConcurrentLinkedDeque<Session>> sessions = new ConcurrentHashMap<>();
+	
+	@ConfigProperty(name = "kafka.bootstrap.servers")
+	private String kafkaUrl;
+	
 	// Static consumers for dynamic topics
 	private ConcurrentLinkedDeque<ThreadConsumer> staticConsumers = new ConcurrentLinkedDeque<>();
 	// Dynamic consumers for dynamic topics (created as needed)
 	private Map<String, ThreadConsumer> consumers = new ConcurrentHashMap<>();
 
-	// Initiate static consumes with artificial topic (renko mode),
-	// we'll use the renko mode to identify the Group_ID of each consumer.
-	// No subscribe.
+	/**
+	 *  Initiate static consumes with artificial topic (renko mode). <br>
+	 *  We'll use the renko mode to identify the Group_ID of each consumer. <br>
+	 *	No subscribe.
+	 * @param ev
+	 */
     void onStart(@Observes StartupEvent ev) {
 		renkoModes.parallelStream().forEach(modeLoop -> {
 			String groupId = modeLoop + "-in-memory";
-			ThreadConsumer kafkaConsumer = new ThreadConsumer(
-				"localhost:9092", groupId, modeLoop.toUpperCase(), new ConcurrentLinkedDeque<>());
+			
+			ThreadConsumer kafkaConsumer = new ThreadConsumer(kafkaUrl, groupId, modeLoop.toUpperCase());
 			staticConsumers.add(kafkaConsumer);
+			
 			Thread thread = new Thread(kafkaConsumer);
 			thread.start();
 		});
@@ -147,9 +157,7 @@ public class WebSocketServer {
 		String mode = topicName.split("_")[1];
 		String groupId = mode + "-in-memory";
 
-		ThreadConsumer kafkaConsumer = new ThreadConsumer(
-			"localhost:9092", groupId, mode.toUpperCase() + "_" + session.getId().substring(0, 4),
-			new ConcurrentLinkedDeque<>());
+		ThreadConsumer kafkaConsumer = new ThreadConsumer(kafkaUrl, groupId, mode.toUpperCase());
 		kafkaConsumer.subscribeToTopic(topicName);
 		kafkaConsumer.addSession(session);
 

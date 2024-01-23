@@ -24,8 +24,7 @@ public class ThreadConsumer implements Runnable {
 	private boolean stopPoll = false;
 	private boolean keepGoing = true;
 
-	public ThreadConsumer(String bootstrapServers, String groupId, String topic,
-			ConcurrentLinkedDeque<Session> sessions) {
+	public ThreadConsumer(String bootstrapServers, String groupId, String topic) {
 		
 		Properties properties = new Properties();
 		properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -40,10 +39,10 @@ public class ThreadConsumer implements Runnable {
 		this.bootstrapServers = bootstrapServers;
         this.groupId = groupId;
         this.topic = topic;
-        this.sessions = sessions;
-        if (sessions.isEmpty()) {
-        	stopPoll = true;
-        }
+        
+        sessions = new ConcurrentLinkedDeque<>();
+        stopPoll = true;
+        
 		kafkaConsumer = new KafkaConsumer<>(properties);
 	}
 	
