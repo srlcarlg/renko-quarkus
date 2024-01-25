@@ -23,8 +23,8 @@ import jakarta.inject.Inject;
 public class RenkoChartService {
 
 	private static final List<String> renkoModes = Arrays.asList("normal","wicks","nongap");
-	private Map<String, RenkoWS> renkoWSList = new ConcurrentHashMap<>();
-	private Map<String, ConcurrentLinkedDeque<PrevMsgWrapper>> prevMsgMap = new ConcurrentHashMap<>();
+	private static Map<String, RenkoWS> renkoWSList = new ConcurrentHashMap<>();
+	private static Map<String, ConcurrentLinkedDeque<PrevMsgWrapper>> prevMsgMap = new ConcurrentHashMap<>();
 
 	@Inject @Channel("normal-in-memory")
 	@Broadcast

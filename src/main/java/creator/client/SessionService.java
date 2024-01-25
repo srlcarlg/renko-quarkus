@@ -10,7 +10,7 @@ import jakarta.websocket.Session;
 @ApplicationScoped
 public class SessionService {
 	
-	private Map<Session, SessionInfo> sessionRenko = new ConcurrentHashMap<>(); 
+	private static Map<Session, SessionInfo> sessionRenko = new ConcurrentHashMap<>(); 
 	
 	public void addSession(Session session, SessionInfo sessionInfo) {
 		sessionRenko.put(session, sessionInfo);

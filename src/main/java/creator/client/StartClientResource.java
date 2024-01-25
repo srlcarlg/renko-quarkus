@@ -30,11 +30,13 @@ public class StartClientResource {
 		if (service.symbolExists(symbol)) {
 			return String.format("Error: Symbol %s already exists.", symbol);
 		}
+		
 		WebSocketContainer wsContainer = ContainerProvider.getWebSocketContainer();
 		try {
-			final URI uri = URI.create("ws://" + urlSimulator + "/" + symbol);
+			URI uri = URI.create(String.format("ws://%s/%s", urlSimulator, symbol));
 			SessionInfo info = new SessionInfo(symbol, brickSize);
 			Session session = wsContainer.connectToServer(WebSocketClient.class, uri);
+			
 			service.addSession(session, info);
 			return "Done";
 		} catch (Exception e) {

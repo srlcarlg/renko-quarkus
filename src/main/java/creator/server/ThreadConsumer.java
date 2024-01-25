@@ -20,8 +20,7 @@ public class ThreadConsumer implements Runnable {
 	private String bootstrapServers;
 	private String groupId;
 	private String topic;
-	
-	private boolean stopPoll = false;
+	private boolean stopPoll = true;
 	private boolean keepGoing = true;
 
 	public ThreadConsumer(String bootstrapServers, String groupId, String topic) {
@@ -30,7 +29,7 @@ public class ThreadConsumer implements Runnable {
 		properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 		properties.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
 		properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
-		properties.put(ConsumerConfig.CLIENT_ID_CONFIG, "DYNAMIC" + "-" + topic);
+		properties.put(ConsumerConfig.CLIENT_ID_CONFIG, "DYNAMIC-" + topic);
 		properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
 				"org.apache.kafka.common.serialization.StringDeserializer");
 		properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
@@ -39,9 +38,7 @@ public class ThreadConsumer implements Runnable {
 		this.bootstrapServers = bootstrapServers;
         this.groupId = groupId;
         this.topic = topic;
-        
         sessions = new ConcurrentLinkedDeque<>();
-        stopPoll = true;
         
 		kafkaConsumer = new KafkaConsumer<>(properties);
 	}
@@ -82,21 +79,13 @@ public class ThreadConsumer implements Runnable {
     	keepGoing = false;
     	kafkaConsumer.wakeup(); 
 	}
+    
 	public void subscribeToTopic(String newTopic) {
 		stopPoll = true;
 		topic = newTopic;
 		kafkaConsumer.subscribe(Collections.singletonList(topic));
 		stopPoll = false;
 	}
-	public ConcurrentLinkedDeque<Session> getSessions() {
-		return sessions;
-	}
-	public void addSession(Session session) {
-		sessions.add(session);
-	}		
-	public void removeSession(Session session) {
-		sessions.remove(session);
-	}	
 	public void updateTopic(String newTopic) {
 		stopPoll = true;
 		topic = newTopic;
@@ -104,9 +93,18 @@ public class ThreadConsumer implements Runnable {
 		kafkaConsumer.subscribe(Collections.singletonList(topic));
 		stopPoll = false;
 	}
-
+	public void addSession(Session session) {
+		sessions.add(session);
+	}		
+	public void removeSession(Session session) {
+		sessions.remove(session);
+	}
+	
 	public Consumer<String, String> getKafkaConsumer() {
 		return kafkaConsumer;
+	}
+	public ConcurrentLinkedDeque<Session> getSessions() {
+		return sessions;
 	}
 	public String getBootstrapServers() {
 		return bootstrapServers;
