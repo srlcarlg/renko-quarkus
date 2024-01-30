@@ -60,6 +60,8 @@ public class ThreadConsumer implements Runnable {
                 );
                 kafkaConsumer.commitAsync();
             } 
+        } catch (Exception e) {
+        	
         } finally { 
         	kafkaConsumer.close();
         } 
