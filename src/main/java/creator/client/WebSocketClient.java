@@ -28,16 +28,14 @@ public class WebSocketClient {
 
 	@OnOpen
 	public void onOpen(Session session, EndpointConfig endpointConfig) {
-		SessionInfo info = sessionService.getSessionInfo(session);
-		LOG.error(String.format("CLIENT: onOpen> %s", info.getSymbol()));
 		session.getAsyncRemote().sendText("_ready_");
 	}
 
 	@OnClose
 	public void onClose(Session session) {
 		SessionInfo info = sessionService.getSessionInfo(session);
-		sessionService.removeSession(session);		
-		LOG.error(String.format("CLIENT: onClose> %s", info.getSymbol()));
+		sessionService.removeSession(session);
+		LOG.info(String.format("CLIENT: onClose> %s", info.getSymbol()));
 
 	}
 
@@ -45,7 +43,7 @@ public class WebSocketClient {
 	public void onError(Session session, Throwable throwable) {
 		SessionInfo info = sessionService.getSessionInfo(session);
 		sessionService.removeSession(session);
-		closeSession(session);		
+		closeSession(session);
 		LOG.error(String.format("CLIENT: onError> on %s: %s", info.getSymbol(), throwable));
 	}
 

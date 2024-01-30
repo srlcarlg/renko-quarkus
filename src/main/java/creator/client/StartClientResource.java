@@ -3,6 +3,7 @@ package creator.client;
 import java.net.URI;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 
 import creator.client.entities.SessionInfo;
 import jakarta.inject.Inject;
@@ -16,6 +17,7 @@ import jakarta.ws.rs.core.MediaType;
 
 @Path("/client")
 public class StartClientResource {
+    private static final Logger LOG = Logger.getLogger(StartClientResource.class);
 
 	@ConfigProperty(name = "creator.client.simulator.url")
 	private String urlSimulator;
@@ -37,6 +39,7 @@ public class StartClientResource {
 			SessionInfo info = new SessionInfo(symbol, brickSize);
 			Session session = wsContainer.connectToServer(WebSocketClient.class, uri);
 			
+			LOG.info(String.format("CLIENT: onOpen> %s", info.getSymbol()));
 			service.addSession(session, info);
 			return "Done";
 		} catch (Exception e) {
