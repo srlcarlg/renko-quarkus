@@ -9,7 +9,7 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.errors.WakeupException;
+import org.jboss.logging.Logger;
 
 import jakarta.websocket.Session;
 
@@ -22,6 +22,7 @@ public class ThreadConsumer implements Runnable {
 	private String topic;
 	private boolean stopPoll = true;
 	private boolean keepGoing = true;
+    private static final Logger LOG = Logger.getLogger(ThreadConsumer.class);
 
 	public ThreadConsumer(String bootstrapServers, String groupId, String topic) {
 		
@@ -59,18 +60,16 @@ public class ThreadConsumer implements Runnable {
                 );
                 kafkaConsumer.commitAsync();
             } 
-        } catch (WakeupException e) { 
-            System.out.println("Received shutdown signal"); 
         } finally { 
         	kafkaConsumer.close();
-            System.out.println("kafkaConsumer closed"); 
         } 
     } 
 	
 	private void sendAsync(Session s, String message) {
 		s.getAsyncRemote().sendObject(message, result -> {
 			if (result.getException() != null) {
-				System.out.println("Unable to send message: " + result.getException());
+				LOG.error(String.format(
+					"Unable to send message from topic %s: %s", topic, result.getException()));
 			}
 		});
 	}

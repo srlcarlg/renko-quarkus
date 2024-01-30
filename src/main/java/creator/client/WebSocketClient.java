@@ -1,5 +1,7 @@
 package creator.client;
 
+import org.jboss.logging.Logger;
+
 import creator.client.entities.SessionInfo;
 import creator.client.entities.Tick;
 import creator.client.entities.TickDecoder;
@@ -17,6 +19,7 @@ import jakarta.websocket.Session;
 @ClientEndpoint(decoders = TickDecoder.class)
 @ApplicationScoped
 public class WebSocketClient {
+    private static final Logger LOG = Logger.getLogger(WebSocketClient.class);
 
 	@Inject
 	RenkoChartService renkoService;
@@ -25,23 +28,25 @@ public class WebSocketClient {
 
 	@OnOpen
 	public void onOpen(Session session, EndpointConfig endpointConfig) {
-		System.out.println("CLIENT: onOpen> " + session.toString());
+		SessionInfo info = sessionService.getSessionInfo(session);
+		LOG.error(String.format("CLIENT: onOpen> %s", info.getSymbol()));
 		session.getAsyncRemote().sendText("_ready_");
 	}
 
 	@OnClose
 	public void onClose(Session session) {
 		SessionInfo info = sessionService.getSessionInfo(session);
-		System.out.println("CLIENT: onClose> " + session + " on " + info.getSymbol());
-		sessionService.removeSession(session);
+		sessionService.removeSession(session);		
+		LOG.error(String.format("CLIENT: onClose> %s", info.getSymbol()));
+
 	}
 
 	@OnError
 	public void onError(Session session, Throwable throwable) {
 		SessionInfo info = sessionService.getSessionInfo(session);
-		System.out.println("CLIENT: onError> " + session + " on " + info.getSymbol() + ": " + throwable);
 		sessionService.removeSession(session);
-		closeSession(session);
+		closeSession(session);		
+		LOG.error(String.format("CLIENT: onError> on %s: %s", info.getSymbol(), throwable));
 	}
 
 	@OnMessage

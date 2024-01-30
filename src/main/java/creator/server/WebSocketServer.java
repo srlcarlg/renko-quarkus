@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
@@ -14,7 +15,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnError;
-import jakarta.websocket.OnMessage;
 import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
@@ -23,8 +23,9 @@ import jakarta.websocket.server.ServerEndpoint;
 @ServerEndpoint(value = "/renko/{symbol}/{mode}", encoders = OHLCVEncoder.class)
 @ApplicationScoped
 public class WebSocketServer {
+    private static final Logger LOG = Logger.getLogger(WebSocketServer.class);
 	
-	private static final List<String> renkoModes = Arrays.asList("normal","wicks","nongap");	
+	private static final List<String> renkoModes = Arrays.asList("normal","wicks","nongap");
 	// Static consumers for dynamic topics
 	private static ConcurrentLinkedDeque<ThreadConsumer> staticConsumers = new ConcurrentLinkedDeque<>();
 	// Dynamic consumers for dynamic topics (created as needed)
@@ -32,7 +33,7 @@ public class WebSocketServer {
 	
 	@ConfigProperty(name = "kafka.bootstrap.servers")
 	private String kafkaUrl;
-	
+
 	/**
 	 *  Initiate static consumes with artificial topic (renko mode). <br>
 	 *  We'll use the renko mode to identify the Group_ID of each consumer. <br>
@@ -59,24 +60,19 @@ public class WebSocketServer {
 	public void onOpen(Session session, @PathParam("symbol") String symbol, @PathParam("mode") String mode) {
 		String topicName = getTopicName(symbol, mode);
 		consumersLogic(topicName, mode, session);
-		// System.out.println("onOpen> " + topicName);
+		LOG.info(String.format("onOpen> %s", topicName));
 	}
 
 	@OnClose
 	public void onClose(Session session, @PathParam("symbol") String symbol, @PathParam("mode") String mode) {
 		removeSessionFromConsumer(session, symbol, mode);
-		System.out.println("onClose> " + symbol + "_" + mode);
+		LOG.info(String.format("onClose> %s", getTopicName(symbol, mode)));
 	}
 
 	@OnError
 	public void onError(Session session, @PathParam("symbol") String symbol, @PathParam("mode") String mode, Throwable throwable) throws Throwable {
 		removeSessionFromConsumer(session, symbol, mode);
-		// System.out.println(throwable.getClass().toString());
-	}
-
-	@OnMessage
-	public void onMessage(String message, @PathParam("symbol") String symbol, @PathParam("mode") String mode) {
-		// System.out.println("onMessage> " + symbol + ": " + message);
+		LOG.error(String.format("onError> %s", getTopicName(symbol, mode)));
 	}
 
 	private void removeSessionFromConsumer(Session session, String symbol, String mode) {
@@ -99,12 +95,13 @@ public class WebSocketServer {
 				// First Connection for any symbol+mode
 				consumer.addSession(session);
 				consumer.subscribeToTopic(topicName);
-				System.out.println("First Connection to " + topicName 
-						+ " using static consumer of group " + mode.toUpperCase());
+				LOG.info(String.format(
+					"First Connection to %s using static consumer of group %s",
+					topicName, mode.toUpperCase()));
 			} else if (topicLoop.equals(topicName)) {
 				// Already have this symbol+mode
 				consumer.addSession(session);
-				System.out.println("New session added to static consumer with topic " + topicName);
+				LOG.info(String.format("New session added to static consumer with topic %s", topicName));
 			} else {
 				// Subscribe to a symbol+mode using an existing empty session consumer 
 				// with the same Group_ID (renko mode)
@@ -115,8 +112,9 @@ public class WebSocketServer {
 					if (modeLoop.equals(mode) && consumer.getSessions().isEmpty()) {
 						consumer.updateTopic(topicName);
 						consumer.addSession(session);
-						System.out.println("Using an existing empty session static consumer of group " 
-						+ modeLoop.toUpperCase() + " to topic " + topicName);
+						LOG.info(String.format(
+							"Using an existing empty session static consumer of group %s to topic %s", 
+							modeLoop.toUpperCase(), topicName));
 					}
 				}
 			}
@@ -139,7 +137,7 @@ public class WebSocketServer {
 		if (consumers.containsKey(topicName)) {
 			// For multiples sessions with the same symbol+mode
 			consumers.get(topicName).addSession(session);
-			System.out.println("New session added to dynamic consumer with topic " + topicName);
+			LOG.info(String.format("New session added to dynamic consumer with topic %s", topicName));
 		} else {
 			// Check for a empty session consumer with the same Group_ID (renko mode)
 			// then, update the topic, add session, update key.
@@ -147,7 +145,9 @@ public class WebSocketServer {
 				String modeLoop = topicLoop.split("_")[1];
 				ThreadConsumer consumer = consumers.get(topicLoop);
 				if (modeLoop.equals(mode) && consumer.getSessions().isEmpty()) {
-					System.out.println("Using an existing empty session dynamic consumer of group "	+ mode.toUpperCase() + " to topic " + topicName);
+					LOG.info(String.format(
+						"Using an existing empty session dynamic consumer of group %s to topic %s",
+						mode.toUpperCase(), topicName));
 					consumers.get(topicLoop).updateTopic(topicName);
 					consumers.get(topicLoop).addSession(session);
 					consumers.put(topicName, consumers.remove(topicLoop));
@@ -161,7 +161,7 @@ public class WebSocketServer {
 	}
 	
 	private void createNewConsumerAndSubscribe(Session session, String topicName) {
-		System.out.println("Creating new dynamic comsumer for " + topicName);
+		LOG.info(String.format("Creating new dynamic comsumer for %s", topicName));
 		
 		String mode = topicName.split("_")[1];
 		String groupId = mode + "-in-memory";
