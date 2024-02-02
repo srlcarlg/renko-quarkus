@@ -49,19 +49,22 @@ public class ThreadConsumer implements Runnable {
         try { 
             // Poll the data 
             while (keepGoing) { 
-            	if (stopPoll || sessions.isEmpty()) {
+    			if (stopPoll || sessions.isEmpty()) {
             		continue;
             	}
-                ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(1000)); 
-                records.forEach(infoRecord ->
-                	sessions.parallelStream().forEach(session ->
-                		sendAsync(session, infoRecord.value())
-                	)
-                );
-                kafkaConsumer.commitAsync();
+        		synchronized (this) {
+	                ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(1000)); 
+	                records.forEach(infoRecord ->
+	                	sessions.parallelStream().forEach(session ->
+	                		sendAsync(session, infoRecord.value())
+	                	)
+	                );
+	                kafkaConsumer.commitAsync();
+        		}
+                // Sleep to avoid lock on updateTopic method
+                Thread.sleep(200);
             } 
         } catch (Exception e) {
-        	
         } finally { 
         	kafkaConsumer.close();
         } 
@@ -84,14 +87,18 @@ public class ThreadConsumer implements Runnable {
 	public void subscribeToTopic(String newTopic) {
 		stopPoll = true;
 		topic = newTopic;
-		kafkaConsumer.subscribe(Collections.singletonList(topic));
+		synchronized (this) {
+			kafkaConsumer.subscribe(Collections.singletonList(topic));
+		}
 		stopPoll = false;
 	}
 	public void updateTopic(String newTopic) {
 		stopPoll = true;
 		topic = newTopic;
-		kafkaConsumer.unsubscribe();
-		kafkaConsumer.subscribe(Collections.singletonList(topic));
+		synchronized (this) {
+			kafkaConsumer.unsubscribe();
+			kafkaConsumer.subscribe(Collections.singletonList(newTopic));
+		}
 		stopPoll = false;
 	}
 	public void addSession(Session session) {

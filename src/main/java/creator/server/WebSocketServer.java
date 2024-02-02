@@ -10,9 +10,10 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import io.quarkus.runtime.ShutdownEvent;
-import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.CloseReason.CloseCodes;
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnError;
 import jakarta.websocket.OnOpen;
@@ -34,23 +35,6 @@ public class WebSocketServer {
 	@ConfigProperty(name = "kafka.bootstrap.servers")
 	private String kafkaUrl;
 
-	/**
-	 *  Initiate static consumes with artificial topic (renko mode). <br>
-	 *  We'll use the renko mode to identify the Group_ID of each consumer. <br>
-	 *	No subscribe.
-	 * @param ev
-	 */
-    void onStart(@Observes StartupEvent ev) {
-		renkoModes.parallelStream().forEach(modeLoop -> {
-			String groupId = modeLoop + "-in-memory";
-			
-			ThreadConsumer kafkaConsumer = new ThreadConsumer(kafkaUrl, groupId, modeLoop.toUpperCase());
-			staticConsumers.add(kafkaConsumer);
-			
-			Thread thread = new Thread(kafkaConsumer);
-			thread.start();
-		});
-	}
     void onShutdown(@Observes ShutdownEvent ev) {
 		staticConsumers.parallelStream().forEach(ThreadConsumer::shutDown);
 		consumers.values().parallelStream().forEach(ThreadConsumer::shutDown);
@@ -58,10 +42,12 @@ public class WebSocketServer {
 
 	@OnOpen
 	public void onOpen(Session session, @PathParam("symbol") String symbol, @PathParam("mode") String mode) {
-		String topicName = getTopicName(symbol, mode);
-		consumersLogic(topicName, mode, session);
-		LOG.info(String.format("onOpen> %s", topicName));
+		initStaticConsumers();
+		validateMode(session, mode);
+		consumersLogic(symbol, mode, session);
+		LOG.info(String.format("onOpen> %s", getTopicName(symbol, mode)));
 	}
+
 
 	@OnClose
 	public void onClose(Session session, @PathParam("symbol") String symbol, @PathParam("mode") String mode) {
@@ -72,7 +58,7 @@ public class WebSocketServer {
 	@OnError
 	public void onError(Session session, @PathParam("symbol") String symbol, @PathParam("mode") String mode, Throwable throwable) throws Throwable {
 		removeSessionFromConsumer(session, symbol, mode);
-		LOG.error(String.format("onError> %s", getTopicName(symbol, mode)));
+		LOG.error(String.format("onError> %s: %s", getTopicName(symbol, mode), throwable.getLocalizedMessage()));
 	}
 
 	private void removeSessionFromConsumer(Session session, String symbol, String mode) {
@@ -87,7 +73,9 @@ public class WebSocketServer {
 		}
 	}
 	
-	private void consumersLogic(String topicName, String mode, Session session) {
+	private void consumersLogic(String symbol, String mode, Session session) {
+		String topicName = getTopicName(symbol, mode);
+		
 		// Static consumers first
 		staticConsumers.parallelStream().forEach(consumer -> {
 			String topicLoop = consumer.getTopic();
@@ -164,9 +152,10 @@ public class WebSocketServer {
 		LOG.info(String.format("Creating new dynamic comsumer for %s", topicName));
 		
 		String mode = topicName.split("_")[1];
-		String groupId = mode + "-in-memory";
+		String groupId = String.format("%s-in-memory", mode);
 
-		ThreadConsumer kafkaConsumer = new ThreadConsumer(kafkaUrl, groupId, mode.toUpperCase());
+		ThreadConsumer kafkaConsumer = new ThreadConsumer(kafkaUrl, groupId, 
+				String.format("%s-%s", mode.toUpperCase(), session.getId().substring(0, 4)));
 		kafkaConsumer.subscribeToTopic(topicName);
 		kafkaConsumer.addSession(session);
 
@@ -175,9 +164,35 @@ public class WebSocketServer {
 		Thread thread = new Thread(kafkaConsumer);
 		thread.start();
 	}
+	
+	private void validateMode(Session session, String mode) {
+		try {
+			if (!renkoModes.contains(mode)) {
+				session.close(new CloseReason(CloseCodes.CANNOT_ACCEPT,
+					String.format("only [%s] modes are valids", renkoModes.toString()))
+				);
+			}
+		} catch (Exception e) {
+			LOG.error(e);
+		}
+	}
 
+    private void initStaticConsumers() {
+    	if (staticConsumers.isEmpty()) {
+			renkoModes.parallelStream().forEach(modeLoop -> {
+				String groupId = modeLoop + "-in-memory";
+				
+				ThreadConsumer kafkaConsumer = new ThreadConsumer(kafkaUrl, groupId, modeLoop.toUpperCase());
+				staticConsumers.add(kafkaConsumer);
+				
+				Thread thread = new Thread(kafkaConsumer);
+				thread.start();
+			});
+    	}
+	}
+    
 	private String getTopicName(String symbol, String mode) {
-		return symbol.toLowerCase() + "_" + mode;
+		return String.format("%s_%s", symbol.toLowerCase(), mode);
 	}
 	public ConcurrentLinkedDeque<ThreadConsumer> getStaticConsumers() {
 		return staticConsumers;

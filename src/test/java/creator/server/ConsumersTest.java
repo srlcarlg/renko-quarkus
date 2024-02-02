@@ -66,12 +66,14 @@ public class ConsumersTest {
 					// Remove session of DYNAMIC consumer of group WICKS
 					stopSessionCreateAnother("eurgbp_wicks", topicName, modeURI); break;
 				default:
-		    		// Remove session of STATIC consumer of group NONGAP
-					stopSessionCreateAnother("us30_nongap", topicName, modeURI); break;
+		    		// Remove session of DYNAMIC consumer of group NONGAP
+					stopSessionCreateAnother("eurgbp_nongap", topicName, modeURI); break;
 				}
     		});
     	}
     	
+        try { Thread.sleep(1000); } catch (Exception ex) { }
+
     	List<String> staticConsumersTopics = server.getStaticConsumers()
     			.parallelStream().map(ThreadConsumer::getTopic).toList();
     	List<String> dynamicConsurmersTopics = server.getDynamicConsumers().values()
@@ -103,7 +105,7 @@ public class ConsumersTest {
 	    List<String> mode = Arrays.asList("normal", "wicks", "nongap");
 		return Stream.of(
 	    	Arguments.of("US30", 5D, mode),
-	        Arguments.of("NASDAQ", 0.0003, mode),
+	        Arguments.of("EURGBP", 0.0003, mode),
 	        Arguments.of("US500", 12D, mode)
 	    );
 	}
