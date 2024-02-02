@@ -14,7 +14,7 @@ import jakarta.websocket.Session;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
 
-@ServerEndpoint(value = "/start-ws/{symbol}", encoders = TickEncoder.class)
+@ServerEndpoint(value = "/ticks/{symbol}", encoders = TickEncoder.class)
 @ApplicationScoped
 public class StartWebSocket {
 
@@ -51,9 +51,11 @@ public class StartWebSocket {
 	}
 
 	private void streamTicks(String symbol) {
+		try {Thread.sleep(1000);} catch (Exception e) {}
 		if (sessions != null && (sessions.size() != 0)) {
 			System.out.println("in Loop " + symbol);
 			for (int i = 0; i < ticks.get(symbol).size(); i++) {
+				try {Thread.sleep(200);} catch (Exception e) {}
 				broadcastAsync(symbol, ticks.get(symbol).get(i));
 			}
 			System.out.println("in Loop FINISHED " + symbol);
