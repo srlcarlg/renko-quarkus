@@ -73,18 +73,30 @@ public class RenkoChartService {
 		List<OHLCV> renko = renkoWSList.get(symbol).renkoAnimate(mode);
 		OHLCV ohlcv = renko.get(0);
 
+		// New Renko
 		if (!prevOhlcv.equals(ohlcv)) {
 			TopicMsg msg = new TopicMsg(symbol, ohlcv);
-			OutgoingKafkaRecordMetadata<?> metadata2 = OutgoingKafkaRecordMetadata.builder()
-					.withTopic(symbol.toLowerCase() + "_" + mode)
+			OutgoingKafkaRecordMetadata<?> metadata = OutgoingKafkaRecordMetadata.builder()
+					.withTopic(String.format("%s_%s", symbol.toLowerCase(), mode))
 					.build();
-			switch (mode) {
-				case "wicks": wicksEmitter.send(Message.of(msg).addMetadata(metadata2)); break;
-				case "nongap": nongapEmitter.send(Message.of(msg).addMetadata(metadata2)); break;
-				default: normalEmitter.send(Message.of(msg).addMetadata(metadata2)); break;
-			}
+			toEmitter(mode, msg, metadata);
 		}
 		setPrevMsg(symbol, mode, ohlcv);
+		
+		// Forming Renko
+		// TopicMsg msg = new TopicMsg(symbol, renko.get(1));
+		// OutgoingKafkaRecordMetadata<?> metadata = OutgoingKafkaRecordMetadata.builder()
+		//		.withTopic(String.format("%s_%s_%s", symbol.toLowerCase(), mode, "forming"))
+		//		.build();
+		// toEmitter(mode, msg, metadata);
+	}
+	
+	private void toEmitter(String mode, TopicMsg msg, OutgoingKafkaRecordMetadata<?> metadata) {
+		switch (mode) {
+			case "wicks": wicksEmitter.send(Message.of(msg).addMetadata(metadata)); break;
+			case "nongap": nongapEmitter.send(Message.of(msg).addMetadata(metadata)); break;
+			default: normalEmitter.send(Message.of(msg).addMetadata(metadata)); break;
+		}
 	}
 
 	private void setPrevMsg(String symbol, String mode, OHLCV ohlcv) {

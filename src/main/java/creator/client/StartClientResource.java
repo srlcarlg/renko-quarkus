@@ -43,7 +43,7 @@ public class StartClientResource {
 			service.addSession(session, info);
 			return "Done";
 		} catch (Exception e) {
-			return "Error " + e.toString();
+			return String.format("Error %s %ncannot connect to simulator server, is it ON?", e.toString());
 		}
 	}
 }
