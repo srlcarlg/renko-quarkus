@@ -1,5 +1,6 @@
 package creator.server;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import io.quarkus.runtime.ShutdownEvent;
+import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.websocket.CloseReason;
@@ -34,12 +36,7 @@ public class WebSocketServer {
 	
 	@ConfigProperty(name = "kafka.bootstrap.servers")
 	private String kafkaUrl;
-
-    void onShutdown(@Observes ShutdownEvent ev) {
-		staticConsumers.parallelStream().forEach(ThreadConsumer::shutDown);
-		consumers.values().parallelStream().forEach(ThreadConsumer::shutDown);
-	}
-
+	
 	@OnOpen
 	public void onOpen(Session session, @PathParam("symbol") String symbol, @PathParam("mode") String mode) {
 		initStaticConsumers();
@@ -191,6 +188,25 @@ public class WebSocketServer {
     	}
 	}
     
+	@Scheduled(every = "30m")
+	void closeDynamicConsumers() {
+		List<String> keysToRemove = new ArrayList<>();
+		consumers.keySet().forEach(x -> {
+			if (consumers.get(x).getSessions().isEmpty()) {
+				keysToRemove.add(x);
+				consumers.get(x).shutDown();
+			}
+		});
+		if (!keysToRemove.isEmpty()) {
+			LOG.info(String.format("SCHEDULED: Removed %s empty session dynamic consumers", keysToRemove));	
+		}
+		keysToRemove.forEach(key -> consumers.remove(key));
+	}	
+    void onShutdown(@Observes ShutdownEvent ev) {
+		staticConsumers.parallelStream().forEach(ThreadConsumer::shutDown);
+		consumers.values().parallelStream().forEach(ThreadConsumer::shutDown);
+	}
+
 	private String getTopicName(String symbol, String mode) {
 		return String.format("%s_%s", symbol.toLowerCase(), mode);
 	}
