@@ -14,7 +14,7 @@ localhost:9000/client/{symbol}/{brickSize}
 ```
 The WebSocketClient will open a connection to simulator server, while the symbol and brickSize are stored in SessionService
 
-Every message came from simulator will be transfered to  reactive RenkoChartService, send to **3 producers** (`normal-in-memory`, `wicks-in-memory`, `nongap-in-memory`) a **dynamic topic** with the following pattern:
+Every message came from simulator will be transfered to reactive RenkoChartService, send to **3 producers** (`normal-in-memory`, `wicks-in-memory`, `nongap-in-memory`) a **dynamic topic** with the following pattern:
 ```text
 new renko: {symbol}_{mode}
 forming renko: {symbol}_{mode}_forming
@@ -53,23 +53,9 @@ Consumer nongap-0, topic us500_nongap, total sessions: 1
 
 ## <a name="usage"></a>Usage
 The application can be run in:
-- [Dev mode](#dev-mode)
-- [Packaged running locally (or Docker)](#locally)
-- [Native executable running locally (or Docker)](#native)
-
-After choose your prefered way, and once time that all things are on: <br>
-
-1º: Connect multiples websocket clients with the proper chart logic to renko server _(see python folder)_:
-- ws://127.0.0.1:9000/renko/US30/`{mode}`
-- ws://127.0.0.1:9000/renko/EURGBP/`{mode}` <br>
-`{mode}` can be `normal`, `wicks` or `nongap`
-
-2º: a GET requisition from browser by acessing the following urls:
-- http://localhost:9000/client/US30/5
-- http://localhost:9000/client/EURGBP/0.0003
 
 <details>
-<summary>Dev mode</summary>
+<summary><i>Dev mode</i></summary>
 
 ### <a name="dev-mode"></a>Dev mode
 In root path: <br>
@@ -85,7 +71,7 @@ Thanks to [Quarkus Dev Services](https://quarkus.io/guides/kafka-dev-services), 
 </details>
 
 <details>
-<summary>Packaged running locally (or Docker)</summary>
+<summary><i>Packaged running locally (or Docker)</i></summary>
 
 ### <a name="locally"></a>Packaged running locally
 In root path: <br>
@@ -95,7 +81,7 @@ In root path: <br>
 ./mvnw -f creator package
 ```
 > **_NOTE:_** Before packaging **creator**, you'll need to change 2 properties in application.properties to:<br>
-_**%prod.kafka.bootstrap.servers**=localhost:9092_
+_**%prod.kafka.bootstrap.servers**=localhost:9092_ <br>
 _**%prod.creator.client.simulator.url**=localhost:8080/ticks._ <br>
 If running on Docker, no changes are needed.
 
@@ -116,7 +102,7 @@ docker compose up -d
 </details>
 
 <details>
-<summary>Native executable running locally (or Docker)</summary>
+<summary><i>Native executable running locally (or Docker)</i></summary>
 
 ### <a name="native"></a>Native executable running locally (or Docker)
 1º package simulator and creator.
@@ -125,7 +111,7 @@ docker compose up -d
 ./mvnw -f creator package -Dnative -Dquarkus.native.container-build=true
 ```
 > **_NOTE:_** Before packaging **creator**, you'll need to change 2 properties in application.properties to:<br>
-_**%prod.kafka.bootstrap.servers**=localhost:9092_
+_**%prod.kafka.bootstrap.servers**=localhost:9092_ <br>
 _**%prod.creator.client.simulator.url**=localhost:8080/ticks._ <br>
 If running on Docker, no changes are needed.
 
@@ -144,3 +130,14 @@ Afte 1º just do:
 docker compose -f native-compose.yaml up -d
 ```
 </details>
+
+After choose your prefered way, and once time that all things are on: <br>
+
+1º: Connect multiples websocket clients with the proper chart logic to renko server _(see python folder)_:
+- ws://127.0.0.1:9000/renko/US30/`{mode}`
+- ws://127.0.0.1:9000/renko/EURGBP/`{mode}` <br>
+`{mode}` can be `normal`, `wicks` or `nongap`
+
+2º: a GET requisition from browser by acessing the following urls:
+- http://localhost:9000/client/US30/5
+- http://localhost:9000/client/EURGBP/0.0003
