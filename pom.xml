@@ -5,4 +5,8 @@
   <version>0.0.1-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>renkoquarkus</name>
+  <modules>
+	<module>creator</module>
+	<module>simulator</module>
+  </modules>
 </project>
