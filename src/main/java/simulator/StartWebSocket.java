@@ -55,7 +55,7 @@ public class StartWebSocket {
 		if (sessions != null && (sessions.size() != 0)) {
 			System.out.println("in Loop " + symbol);
 			for (int i = 0; i < ticks.get(symbol).size(); i++) {
-				try {Thread.sleep(200);} catch (Exception e) {}
+				// try {Thread.sleep(200);} catch (Exception e) {}
 				broadcastAsync(symbol, ticks.get(symbol).get(i));
 			}
 			System.out.println("in Loop FINISHED " + symbol);
